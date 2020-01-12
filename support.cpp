@@ -804,7 +804,7 @@ void support_point::GenerateSupportModel()
 					Point3d C(temp.a.x + cone_length*(temp.b.x - temp.a.x) / disAB, temp.a.y + cone_length*(temp.b.y - temp.a.y) / disAB,
 						temp.a.z + cone_length*(temp.b.z - temp.a.z) / disAB);
 					//生成锥
-					model.creatReverseCone(12, point_radius[temp.a], C, temp.b);
+					model.creatReverseCone(12, point_radius[temp.a], temp.b, C);
 					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
 					//生成柱
 					model.creatCylinder(12, point_radius[temp.a], point_radius[temp.a], temp.a, C);
