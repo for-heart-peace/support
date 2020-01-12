@@ -682,61 +682,147 @@ void merge_off(vector<Point3d>&sum_point,vector<Point3i>&sum_face,vector<Point3d
 	
 
 }
+
+bool cmp_line(support_line_node& a, support_line_node& b)
+{
+	return a.a.z>b.a.z;
+}
+
 void support_point::GenerateSupportModel()
 {
+	double min_radius = 0.1;
+	double max_radius = 0.5;
 	double top = 0.2;
+	double cone_length = 0.6;
 	support_off_point.clear();
 	support_off_face.clear();
+	map<Point3d, double>point_radius;
+	sort(support_line.begin(), support_line.end(), cmp_line);
 	for (int i = 0; i<support_line.size(); i++)
 	{
 		support_line_node temp;
 		temp = support_line[i];
 		if (temp.flaga == 1)
 		{
-			if (temp.flagb == 1)
+			if (temp.flagb == 1)//两点都是在面上
 			{
-				Point3d C(temp.a.x*0.5+temp.b.x*0.5, temp.a.y*0.5 + temp.b.y*0.5, temp.a.z*0.5 + temp.b.z*0.5);
-				double dis = dis_pp(temp.a, temp.b);
-				temp.a.x += top*(temp.a.x - temp.b.x) / dis;
-				temp.a.y += top*(temp.a.y - temp.b.y) / dis;
-				temp.a.z += top*(temp.a.z - temp.b.z) / dis;
-				model.creatCone(12, 0.2, temp.a, C);
-				merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
-				dis = dis_pp(temp.a, temp.b);
-				temp.b.x += top*(temp.b.x - temp.a.x) / dis;
-				temp.b.y += top*(temp.b.y - temp.a.y) / dis;
-				temp.b.z += top*(temp.b.z - temp.a.z) / dis;
-				
-				model.creatReverseCone(12, 0.2, temp.b, C);
-				merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+				if (dis_pp(temp.a, temp.b) <= 2 * cone_length)//距离过近，只生成两个锥
+				{
+					Point3d C(temp.a.x*0.5 + temp.b.x*0.5, temp.a.y*0.5 + temp.b.y*0.5, temp.a.z*0.5 + temp.b.z*0.5);
+					double dis = dis_pp(temp.a, temp.b);
+					temp.a.x += top*(temp.a.x - temp.b.x) / dis;
+					temp.a.y += top*(temp.a.y - temp.b.y) / dis;
+					temp.a.z += top*(temp.a.z - temp.b.z) / dis;
+					model.creatCone(12, min_radius, temp.a, C);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+					dis = dis_pp(temp.a, temp.b);
+					temp.b.x += top*(temp.b.x - temp.a.x) / dis;
+					temp.b.y += top*(temp.b.y - temp.a.y) / dis;
+					temp.b.z += top*(temp.b.z - temp.a.z) / dis;
+					model.creatReverseCone(12, min_radius, temp.b, C);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+				}
+				else//有一定距离，生成两个锥一个柱
+				{
+					double disAB = dis_pp(temp.a, temp.b);
+					Point3d C(temp.a.x + cone_length*(temp.b.x - temp.a.x) / disAB, temp.a.y + cone_length*(temp.b.y - temp.a.y) / disAB,
+						temp.a.z + cone_length*(temp.b.z - temp.a.z) / disAB);
+					Point3d D(temp.b.x + cone_length*(temp.a.x - temp.b.x) / disAB, temp.b.y + cone_length*(temp.a.y - temp.b.y) / disAB,
+						temp.b.z + cone_length*(temp.a.z - temp.b.z) / disAB);
+					//第一个锥
+					double dis = dis_pp(temp.a, temp.b);
+					temp.a.x += top*(temp.a.x - temp.b.x) / dis;
+					temp.a.y += top*(temp.a.y - temp.b.y) / dis;
+					temp.a.z += top*(temp.a.z - temp.b.z) / dis;
+					model.creatCone(12, min_radius, temp.a, C);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+					//柱
+					model.creatCylinder(12, min_radius, min_radius, C, D);
+					merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
+					//第二个锥
+					dis = dis_pp(temp.a, temp.b);
+					temp.b.x += top*(temp.b.x - temp.a.x) / dis;
+					temp.b.y += top*(temp.b.y - temp.a.y) / dis;
+					temp.b.z += top*(temp.b.z - temp.a.z) / dis;
+					model.creatReverseCone(12, min_radius, temp.b, D);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+				}
 			}
 
-			else
+			else //从面上延申出来一个锥
 			{
 				double dis = dis_pp(temp.a, temp.b);
 				temp.a.x += top*(temp.a.x - temp.b.x) / dis;
 				temp.a.y += top*(temp.a.y - temp.b.y) / dis;
 				temp.a.z += top*(temp.a.z - temp.b.z) / dis;
-				model.creatCone(12, 0.2, temp.a, temp.b);
-				merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+				if (dis>cone_length)//生成一个柱，一个锥
+				{
+					double disAB = dis_pp(temp.a, temp.b);
+					Point3d C(temp.a.x + cone_length*(temp.b.x - temp.a.x) / disAB, temp.a.y + cone_length*(temp.b.y - temp.a.y) / disAB,
+						temp.a.z + cone_length*(temp.b.z - temp.a.z) / disAB);
+
+					model.creatCone(12, min_radius, temp.a, C);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+					if (point_radius.count(temp.b) == 0)
+						point_radius[temp.b] = min_radius + 0.1;
+					else
+					{
+						point_radius[temp.b] = max(min_radius + 0.1, point_radius[temp.b]);
+					}
+					//柱
+					model.creatCylinder(12, min_radius, point_radius[temp.b], C, temp.b);
+					merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
+				}
+				else
+				{
+					if (point_radius.count(temp.b) == 0) point_radius[temp.b] = min_radius + 0.1;
+					else 	point_radius[temp.b] = max(min_radius + 0.1, point_radius[temp.b]);
+
+					model.creatCone(12, min_radius, temp.a, temp.b);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+				}
 			}
 		}
 		else
 		{
-			if (temp.flagb == 1)
+			if (temp.flagb == 1)//生成到面上的锥
 			{
+
 				double dis = dis_pp(temp.a, temp.b);
 				temp.b.x += top*(temp.b.x - temp.a.x) / dis;
 				temp.b.y += top*(temp.b.y - temp.a.y) / dis;
 				temp.b.z += top*(temp.b.z - temp.a.z) / dis;
 				temp.b.z = max(temp.b.z, min_z);
-				model.creatReverseCone(12, 0.2, temp.b, temp.a);
-				
-				merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+				if (dis<cone_length)
+				{
+					model.creatReverseCone(12, point_radius[temp.a], temp.b, temp.a);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+				}
+				else
+				{
+					double disAB = dis_pp(temp.a, temp.b);
+					Point3d C(temp.a.x + cone_length*(temp.b.x - temp.a.x) / disAB, temp.a.y + cone_length*(temp.b.y - temp.a.y) / disAB,
+						temp.a.z + cone_length*(temp.b.z - temp.a.z) / disAB);
+					//生成锥
+					model.creatReverseCone(12, point_radius[temp.a], C, temp.b);
+					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+					//生成柱
+					model.creatCylinder(12, point_radius[temp.a], point_radius[temp.a], temp.a, C);
+					merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
+				}
+
 			}
-			else
-			{			
-				model.creatCylinder(12, 0.2, 0.2, temp.a, temp.b);
+			else   //只生成圆柱
+			{
+				if (point_radius.count(temp.b) == 0)
+				{
+					point_radius[temp.b] = min(point_radius[temp.a] + 0.1, max_radius);
+				}
+				else
+				{
+					point_radius[temp.b] = max(point_radius[temp.b], min(point_radius[temp.a] + 0.1, max_radius));
+				}
+				model.creatCylinder(12, point_radius[temp.a], min(point_radius[temp.a] + 0.1, max_radius), temp.a, temp.b);
 				merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
 			}
 
@@ -744,6 +830,7 @@ void support_point::GenerateSupportModel()
 	}
 	print_off("support.off", support_off_point, support_off_face);
 }
+
 
 void normalize(Point3d& a)
 {
