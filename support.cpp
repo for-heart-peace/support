@@ -690,10 +690,6 @@ bool cmp_line(support_line_node& a, support_line_node& b)
 
 void support_point::GenerateSupportModel()
 {
-	double min_radius = 0.1;
-	double max_radius = 0.5;
-	double top = 0.2;
-	double cone_length = 0.6;
 	support_off_point.clear();
 	support_off_face.clear();
 	map<Point3d, double>point_radius;
@@ -702,6 +698,12 @@ void support_point::GenerateSupportModel()
 	{
 		support_line_node temp;
 		temp = support_line[i];
+		if (temp.b.z == min_z)
+		{
+			temp.b.z -= 0.8;
+			model.creatCylinder(12, bottom_radius, bottom_radius, temp.b, Point3d(temp.b.x, temp.b.y, temp.b.z - bottom_height));
+			merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
+		}
 		if (temp.flaga == 1)
 		{
 			if (temp.flagb == 1)//两点都是在面上
@@ -789,11 +791,13 @@ void support_point::GenerateSupportModel()
 			{
 
 				double dis = dis_pp(temp.a, temp.b);
+				//cout << top << endl;
 				temp.b.x += top*(temp.b.x - temp.a.x) / dis;
 				temp.b.y += top*(temp.b.y - temp.a.y) / dis;
 				temp.b.z += top*(temp.b.z - temp.a.z) / dis;
 				temp.b.z = max(temp.b.z, min_z);
-				if (dis<cone_length)
+				//cout << dis << " "<<cone_length << endl;
+				if (dis<=cone_length)
 				{
 					model.creatReverseCone(12, point_radius[temp.a], temp.b, temp.a);
 					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
@@ -801,8 +805,8 @@ void support_point::GenerateSupportModel()
 				else
 				{
 					double disAB = dis_pp(temp.a, temp.b);
-					Point3d C(temp.a.x + cone_length*(temp.b.x - temp.a.x) / disAB, temp.a.y + cone_length*(temp.b.y - temp.a.y) / disAB,
-						temp.a.z + cone_length*(temp.b.z - temp.a.z) / disAB);
+					Point3d C(temp.b.x - cone_length*(temp.b.x - temp.a.x) / disAB, temp.b.y - cone_length*(temp.b.y - temp.a.y) / disAB,
+						temp.b.z - cone_length*(temp.b.z - temp.a.z) / disAB);
 					//生成锥
 					model.creatReverseCone(12, point_radius[temp.a], temp.b, C);
 					merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
