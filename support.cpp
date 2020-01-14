@@ -52,6 +52,10 @@ bool support_point::readoff(string filename)
 		visit.push_back(0);//该点没访问过
 		edge.push_back(edge_temp);
 		fscanf(FI, "%lf%lf%lf", &temp.x, &temp.y, &temp.z);
+		max_x = max(max_x, temp.x);
+		max_y = max(max_y, temp.y);
+		min_x = min(min_x, temp.x);
+		min_y = min(min_y, temp.y);
 		if(flag==1)
 			min_z=min(min_z,temp.z);
 		//fscanf(FI, "%lf%lf%lf", &temp[0], &temp[1], &temp[2]);
@@ -683,6 +687,65 @@ void merge_off(vector<Point3d>&sum_point,vector<Point3i>&sum_face,vector<Point3d
 
 }
 
+//加底面
+//2d两点距离
+double dis_2d(Point2d a, Point2d b)
+{
+	Point2d c = a - b;
+	return sqrt(c.x*c.x + c.y*c.y);
+}
+//叉乘
+double X_2d(Point2d a, Point2d b)
+{
+	return a.x*b.y - a.y*b.x;
+}
+Point2d temp_2d;//point_2d[0]左下角的点
+bool bottom_cmp(const  Point2d& a, const Point2d& b)
+{
+	double x = X_2d(a - temp_2d, b - temp_2d);
+	if (x>0) return 1;
+	if (x == 0 && dis_2d(a, temp_2d)<dis_2d(b, temp_2d)) return 1;
+	return 0;
+}
+double multi(Point2d p1, Point2d p2, Point2d p3)
+{
+	return X_2d(p2 - p1, p3 - p1);
+}
+void support_point::bottom_base()
+{
+	vector<Point2d>bottom_point;
+	point_2d.clear();
+	for (int i = 0; i<point.size(); i++)
+	{
+		point_2d.push_back(Point2d(point[i].x, point[i].y));
+	}
+
+	int k = 1;
+	for (int i = 1; i<point_2d.size(); i++)
+		if (point_2d[i].y<point_2d[k].y || (point_2d[i].y == point_2d[k].y&&point_2d[i].x<point_2d[k].x))k = i;
+	swap(point_2d[0], point_2d[k]);
+	temp_2d = point_2d[0];
+	sort(point_2d.begin() + 1, point_2d.end(), bottom_cmp);
+	bottom_point.push_back(point_2d[0]);
+	bottom_point.push_back(point_2d[1]);
+	for (int i = 2; i<point_2d.size(); i++)
+	{
+		//while(t>=2&&multi(s[t-1],s[t],p[i])<=0) t--;
+		while (1)
+		{
+			int t = bottom_point.size() - 1;
+			if (t>=2&&multi(bottom_point[t - 1], bottom_point[t], point_2d[i]) <= 0)
+				bottom_point.pop_back();
+			else
+				break;
+		}
+		bottom_point.push_back(point_2d[i]);
+	}
+	model.creatBase(bottom_point, min_z-0.8, bottom_height);
+	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);
+}
+
+
 bool cmp_line(support_line_node& a, support_line_node& b)
 {
 	return a.a.z>b.a.z;
@@ -694,6 +757,9 @@ void support_point::GenerateSupportModel()
 	support_off_face.clear();
 	map<Point3d, double>point_radius;
 	sort(support_line.begin(), support_line.end(), cmp_line);
+	/*model.creatBase(min_x,max_x,min_y,max_y, min_z-0.8, bottom_height);
+	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);*/
+	bottom_base();
 	for (int i = 0; i<support_line.size(); i++)
 	{
 		support_line_node temp;
@@ -701,8 +767,8 @@ void support_point::GenerateSupportModel()
 		if (temp.b.z == min_z)
 		{
 			temp.b.z -= 0.8;
-			model.creatCylinder(12, bottom_radius, bottom_radius, temp.b, Point3d(temp.b.x, temp.b.y, temp.b.z - bottom_height));
-			merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
+			/*model.creatCylinder(12, bottom_radius, bottom_radius, temp.b, Point3d(temp.b.x, temp.b.y, temp.b.z - bottom_height));
+			merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);*/
 		}
 		if (temp.flaga == 1)
 		{
