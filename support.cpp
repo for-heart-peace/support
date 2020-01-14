@@ -283,9 +283,9 @@ void support_point::GetSupportPoint()
 		int x_point=floor((maxx-minx)/dis_x);//x轴方向的点个数
 		int y_point=floor((maxy-miny)/dis_y);//y轴方向的点个数
 
-		if(x_point==0&&y_point==0)continue;
+		if(x_point==0||y_point==0)continue;
 
-		if(x_point==0)
+		/*if(x_point==0)
 		{
           double now_x=(maxx+minx)/2;
 		  Point3d temp;
@@ -310,7 +310,7 @@ void support_point::GetSupportPoint()
 			  temp.x=nowx+j*dis_x;
 			  face2d_point.push_back(temp);
 		  }
-		}
+		}*/
 		else
 		{
 			Point3d temp;
@@ -480,7 +480,7 @@ void Point2Point3d(Point3d& a,Point b)
 //加入和mesh的交点时候要注意改flag
 void support_point::GenerateSupport()
 {   
-	const char* filename = "C:\\Users\\Bamboo\\Desktop\\CLEAR.off";
+	const char* filename = file_name.c_str();
 	std::ifstream input(filename);
 	Polyhedron polyhedron;
 	input >> polyhedron;
@@ -508,11 +508,10 @@ void support_point::GenerateSupport()
 		Point3d insection_temp;
 		for(int i=1;i<support_point_sort.size();i++)
 	{
-		if ((pow(support_point_sort[0].point.z - support_point_sort[i].point.z, 2) -
+		if ((tan(support_angle / 180.0*PI)*pow(support_point_sort[0].point.z - support_point_sort[i].point.z, 2) -
 			pow(support_point_sort[0].point.x - support_point_sort[i].point.x, 2) -
-			pow(support_point_sort[0].point.y - support_point_sort[i].point.y, 2)
-			)>-0.04)continue;
-		Point3d insection=calculateTheIntersectionOfTwoCone(support_point_sort[0].point,support_point_sort[i].point,PI/4);
+			pow(support_point_sort[0].point.y - support_point_sort[i].point.y, 2))>-0.04)continue;
+		Point3d insection=calculateTheIntersectionOfTwoCone(support_point_sort[0].point,support_point_sort[i].point, support_angle / 180.0*PI);
 		double dis1=dis_pp(support_point_sort[0].point,insection);
 		Point a(support_point_sort[0].point.x, support_point_sort[0].point.y, support_point_sort[0].point.z-0.001);
 		Point b(insection.x, insection.y, insection.z);
@@ -540,7 +539,7 @@ void support_point::GenerateSupport()
 			{
 				for (int j = 1; j <= 5; j++)
 				{
-					Vector b = Vector(1.0/j*cos(PI * 2.0 / edge*i), 1.0 / j*sin(PI * 2.0 / edge*i), -1.0);
+					Vector b = Vector(1.0/j*cos(PI * 2.0 / edge*i), 1.0 / j*sin(PI * 2.0 / edge*i), -1.0*tan(support_angle / 180.0*PI));
 					//cout << PI * 2.0 / edge*i << endl;
 					
 					//cout <<"bs"<< b.x() << " " << b.y() << " " << b.z() << endl;
@@ -741,7 +740,7 @@ void support_point::bottom_base()
 		}
 		bottom_point.push_back(point_2d[i]);
 	}
-	model.creatBase(bottom_point, min_z-0.8, bottom_height);
+	model.creatBase(bottom_point, min_z-bottom_down, bottom_height);
 	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);
 }
 
@@ -757,7 +756,7 @@ void support_point::GenerateSupportModel()
 	support_off_face.clear();
 	map<Point3d, double>point_radius;
 	sort(support_line.begin(), support_line.end(), cmp_line);
-	/*model.creatBase(min_x,max_x,min_y,max_y, min_z-0.8, bottom_height);
+	/*model.creatBase(min_x,max_x,min_y,max_y, min_z-bottom_down, bottom_height);
 	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);*/
 	bottom_base();
 	for (int i = 0; i<support_line.size(); i++)
@@ -766,7 +765,7 @@ void support_point::GenerateSupportModel()
 		temp = support_line[i];
 		if (temp.b.z == min_z)
 		{
-			temp.b.z -= 0.8;
+			temp.b.z -= bottom_down;
 			/*model.creatCylinder(12, bottom_radius, bottom_radius, temp.b, Point3d(temp.b.x, temp.b.y, temp.b.z - bottom_height));
 			merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);*/
 		}
@@ -838,7 +837,7 @@ void support_point::GenerateSupportModel()
 						point_radius[temp.b] = max(min_radius + 0.1, point_radius[temp.b]);
 					}
 					//柱
-					model.creatCylinder(12, min_radius, point_radius[temp.b], C, temp.b);
+					model.creatCylinder(12, min_radius, min_radius + 0.1, C, temp.b);
 					merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
 				}
 				else
@@ -910,107 +909,6 @@ void normalize(Point3d& a)
 	a.y/=dis;
 	a.z/=dis;
 }
-//计算圆锥的向量
-Point3d support_point::caculateConeNormal(const Point3d &A,const Point3d & B,float alpha)//A是
-{
-	//A(a,b,c)
-	Point3d ConnectNormaAB=Point3d(B.x-A.x,B.y-A.y,B.z-A.z);
-	normalize(ConnectNormaAB);
-	float a=ConnectNormaAB.x;
-	float b=ConnectNormaAB.y;
-	float c=ConnectNormaAB.z;
-	//B(d,e,f)
-	Point3d printNorma=Point3d(0,0,1);
-	normalize(printNorma);
-	float d=printNorma.x;
-	float e=printNorma.y;
-	float f=printNorma.z;
-	//THE C(g,h,l)
-	float g;
-	float h;
-	float l;
-
-	
-	//设 l=f;
-	l=f;
-	//模长
-	float module=f/cos(alpha);
-	//在oxy方向投影
-	float length=module*sin(alpha);
-
-
-	g=length*a/sqrt(a*a+b*b);
-
-	h=length*b/sqrt(a*a+b*b);
-
-	Point3d ConeNormal=Point3d(g,h,l);
-	normalize(ConeNormal);
-	return ConeNormal;
-
-
-}
-//计算两直线的交点
-Point3d support_point::calculateTheIntersectionOfTwoCone1(const Point3d &A,const Point3d & B,float alpha)//A是
-{
-	Point3d intersection;
-
-	Point3d FormPoint_BA=A;//the base point
-	Point3d toPoint_BA=B;//the pointer point
-	Point3d lineNormal_BA=caculateConeNormal(toPoint_BA,FormPoint_BA,alpha);
-	//get the equation of the line
-	//将直线方程写成参数方程形式，即有：
-	//	x = m1+ v1 * t1
-	//	y = m2+ v2 * t1                                                    (1)
-	//	z = m3+ v3 * t1
-	float m1=FormPoint_BA.x;
-	float m2=FormPoint_BA.y;
-	float m3=FormPoint_BA.z;
-	float v1=lineNormal_BA.x;
-	float v2=lineNormal_BA.y;
-	float v3=lineNormal_BA.z;
-
-	//得到相对对应的直线方程
-	Point3d FormPoint_AB=B;//the base point
-	Point3d toPoint_AB=A;//the pointer point
-	Point3d lineNormal_AB=caculateConeNormal(toPoint_AB,FormPoint_AB,3.1415926/4);//45°
-	//将直线方程写成参数方程形式，即有：
-	//	x = m4+ v4 * t2
-	//	y = m5+ v5 * t2                                                    (1)
-	//	z = m6+ v6 * t2
-	float m4=FormPoint_AB.x;
-	float m5=FormPoint_AB.y;
-	float m6=FormPoint_AB.z;
-	float v4=lineNormal_AB.x;
-	float v5=lineNormal_AB.y;
-	float v6=lineNormal_AB.z;
-
-	//联立直线方程和平面方程得到t,这个地方出现了零
-
-	float t1,t2;
-	if (v3*v4-v1*v6<(0.0000001))
-	{
-		t1=(m2*v6-m3*v5-m5*v6+m6*v5)/(v3*v5-v2*v6);
-		t2=(v2*m3-v3*m2-v2*m6+v3*m5)/(v2*v6-v3*v5);
-	}
-	else
-	{
-		t1=(m1*v6-m3*v4-m4*v6+m6*v4)/(v3*v4-v1*v6);
-		t2=(v1*m3-v3*m1-v1*m6+v3*m4)/(v1*v6-v3*v4);
-	}
-
-	//代入其中一个方程可得到交点
-	float x1 = m1+ v1 * t1;
-	float y1 = m2+ v2 * t1;                                            
-	float z1 = m3+ v3 * t1;
-
-	float x2 = m4+ v4 * t2;
-	float y2 = m5+ v5 * t2;                                            
-	float z2 = m6+ v6 * t2;
-
-	intersection=Point3d(x1,y1,z1);
-
-	return intersection;
-}
 
 
 Point3d support_point::calculateTheIntersectionOfTwoCone(const Point3d &A, const Point3d & B, float alpha)//A是
@@ -1018,7 +916,7 @@ Point3d support_point::calculateTheIntersectionOfTwoCone(const Point3d &A, const
 	//该点一定在两点连线的的下方
 	Point3d C;
 	double disz;
-	disz = A.z - B.z;
+	disz = (A.z - B.z)*tan(alpha);
 	double disxy = sqrt(pow(A.x - B.x, 2) + pow(A.y - B.y, 2));
 	C.z = B.z - (disxy - disz) / 2;
 	double temp = (disxy - disz) / 2;
