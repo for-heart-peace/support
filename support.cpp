@@ -513,16 +513,22 @@ void support_point::GenerateSupport()
 				break;
 			}
 		}
+	/*	Segment segment_query(Point(a.x, a.y, a.z - 0.01), Point(a.x, a.y, a.z-2*cone_length));
+		if (tree.do_intersect(segment_query))
+		{
+			flag = 1;
+			cout << i << endl;
+		}*/
 		if (flag == 1)continue;
 		Point3d_mesh B;
 		B.point = b;
-		B.flag = 0;
+		B.flag = 2;
 		temp_sort.push_back(B);
 		support_line_node node;
 		node.a = a;
 		node.b = b;
 		node.flaga = 1;
-		node.flagb = 0;
+		node.flagb = 2;
 		support_line.push_back(node);
 	}
 	support_point_sort = temp_sort;
@@ -541,15 +547,33 @@ void support_point::GenerateSupport()
 				pow(support_point_sort[0].point.y - support_point_sort[i].point.y, 2))>-0.04)continue;
 			Point3d insection = calculateTheIntersectionOfTwoCone(support_point_sort[0].point, support_point_sort[i].point, support_angle / 180.0*PI);
 			double dis1 = dis_pp(support_point_sort[0].point, insection);
+			int flag = 0;
 			Point a(support_point_sort[0].point.x, support_point_sort[0].point.y, support_point_sort[0].point.z - 0.001);
 			Point b(insection.x, insection.y, insection.z);
-			//Point d(-0.2, 0.2, -0.2);
-			//Point e(0, 0, 1.3);
-			Segment segment_query(a, b);
-			if (tree.do_intersect(segment_query))continue;
-			a = Point(support_point_sort[i].point.x, support_point_sort[i].point.y, support_point_sort[i].point.z - 0.001);
-			Segment segment_query1(a, b);
-			if (tree.do_intersect(segment_query))continue;
+			for (int j = 0; j < 9; j++)
+			{
+
+				Segment segment_query(Point(a.x()+ (support_point_sort[0].flag*0.1-0.1+min_radius) * cos(PI * 2.0 / 9.0*j),
+					a.y()+ (support_point_sort[0].flag*0.1-0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), a.z() ),
+					Point(insection.x + (support_point_sort[0].flag*0.1-0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
+					insection.y + (support_point_sort[0].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+				if (tree.do_intersect(segment_query))
+				{
+					flag = 1;
+					break;
+				}
+				Segment segment_query1(Point(support_point_sort[i].point.x + (support_point_sort[0].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
+					support_point_sort[i].point.y + (support_point_sort[0].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), support_point_sort[i].point.z),
+					Point(insection.x + (support_point_sort[0].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
+						insection.y + (support_point_sort[0].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+				if (tree.do_intersect(segment_query1))
+				{
+					flag = 1;
+					break;
+				}
+			}
+			if (flag == 1)continue;
+
 			if (dis>dis1)
 			{
 				dis = dis1;
@@ -621,7 +645,7 @@ void support_point::GenerateSupport()
 			node.b = temp_sort[0].point;
 			node.b.z = min_z;
 			node.flaga = temp_sort[0].flag;
-			node.flagb = 0;
+			node.flagb = (max_radius-min_radius)/0.1+1;
 			support_line.push_back(node);
 			for (int i = 1; i<temp_sort.size(); i++)
 				support_point_sort.push_back(temp_sort[i]);
@@ -635,14 +659,14 @@ void support_point::GenerateSupport()
 					if (i != tmp)
 						support_point_sort.push_back(temp_sort[i]);
 				Point3d_mesh insection_mesh;
-				insection_mesh.flag = 0;
+				//insection_mesh.flag = 0;
 				insection_mesh.point = insection_temp;
 				support_point_sort.push_back(insection_mesh);
 				support_line_node node;
 				node.a = temp_sort[0].point;
 				node.b = insection_mesh.point;
 				node.flaga = temp_sort[0].flag;
-				node.flagb = insection_mesh.flag;
+				node.flagb = min(int((max_radius - min_radius) / 0.1) + 1,max(temp_sort[tmp].flag, temp_sort[0].flag)+1);
 				support_line.push_back(node);
 				node.a = temp_sort[tmp].point;
 				node.flaga = temp_sort[tmp].flag;
@@ -653,31 +677,6 @@ void support_point::GenerateSupport()
 			//交到面上
 			else
 			{
-				// if (temp_sort[0].flag == 1)
-				// {
-				// Point3d_mesh C = temp_sort[0];
-				// C.point.z -= 0.5;
-				// C.flag = 0;
-				// Point a(temp_sort[0].point.x, temp_sort[0].point.y, temp_sort[0].point.z - 0.001);
-				// Point b(temp_sort[0].point.x, temp_sort[0].point.y, temp_sort[0].point.z - 0.5);
-				// //Point d(-0.2, 0.2, -0.2);
-				// //Point e(0, 0, 1.3);
-				// Segment segment_query(a, b);
-				// if (!tree.do_intersect(segment_query))
-				// {
-				// support_line_node node;
-				// node.a = temp_sort[0].point;
-				// node.b = C.point;
-				// node.flaga = temp_sort[0].flag;
-				// node.flagb = 0;
-				// support_line.push_back(node);
-				// for (int i = 1; i<temp_sort.size(); i++)
-				// support_point_sort.push_back(temp_sort[i]);
-				// support_point_sort.push_back(C);
-				// sort(support_point_sort.begin(),support_point_sort.end(),Z_cmp);
-				// continue;
-				// }
-				// }
 				support_line_node node;
 				node.a = temp_sort[0].point;
 				node.b = insection_temp;
@@ -695,7 +694,7 @@ void support_point::GenerateSupport()
 		support_line_node node;
 		node.a = support_point_sort[i].point;
 		node.flaga = support_point_sort[i].flag;
-		node.flagb = 0;
+		node.flagb = int((max_radius - min_radius) / 0.1) + 1;
 		node.b = Point3d(support_point_sort[i].point.x, support_point_sort[i].point.y, min_z);
 		support_line.push_back(node);
 	}
@@ -767,7 +766,7 @@ void support_point::bottom_base()
 		}
 		bottom_point.push_back(point_2d[i]);
 	}
-	model.creatBase(bottom_point, min_z - bottom_down, bottom_height);
+	model.creatBase(bottom_point, min_z - bottom_down+0.1, bottom_height);
 	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);
 }
 
