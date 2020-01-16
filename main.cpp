@@ -6,18 +6,18 @@
 int main()
 {
 	support_point test;
-	test.min_radius = 0.25;
+	test.min_radius = 0.3;
 	test.max_radius = 1.0;
-	test.top = 0.1;
-	test.cone_length = 0.3;
+	test.top = 0.22;
+	test.cone_length = 0.5;
 	test.bottom_radius = 8.0;
 	test.bottom_height = 0.5;
 	test.support_angle = 45.0;
-	test.to_mesh_angle = 89.0;
+	test.to_mesh_angle = 55.0;
 	test.bottom_down = 1.5;
-	test.dis_x=2.0;
-	test.dis_y=2.0;
-	test.min_z=100000.0;
+	test.dis_x = 1.2;
+	test.dis_y = 1.2;
+	test.min_z = 100000.0;
 	test.min_x = 100000.0;
 	test.min_y = 100000.0;
 	test.max_x = -100000.0;
