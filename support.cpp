@@ -136,7 +136,14 @@ bool support_point::print_off(string filename, vector<Point3d>point1, vector<Poi
 	return true;
 }
 
-
+void merge_off(vector<Point3d>&sum_point, vector<Point3i>&sum_face, vector<Point3d>&leaf_point, vector<Point3i>&leaf_face)
+{
+	int sum = sum_point.size();
+	for (int i = 0; i<leaf_point.size(); i++)
+		sum_point.push_back(leaf_point[i]);
+	for (int i = 0; i<leaf_face.size(); i++)
+		sum_face.push_back(Point3i(leaf_face[i].x + sum, leaf_face[i].y + sum, leaf_face[i].z + sum));
+}
 Point3d support_point::normal(Point3i & now_face)
 {
 	//平面方程: na * (x – n1) + nb * (y – n2) + nc * (z – n3) = 0 ;
@@ -221,7 +228,16 @@ bool face_point_cmp(const Point3d &a, const Point3d &b)
 	}
 	else return a.x<b.x;
 }
-
+bool point_normal_cmp(const PointAndNormal &a, const PointAndNormal &b)
+{
+	if (a.point.x == b.point.x)
+	{
+		if (a.point.y == b.point.y)
+			return a.point.z<b.point.z;
+		else return a.point.y<b.point.y;
+	}
+	else return a.point.x<b.point.x;
+}
 
 
 void support_point::GetSupportPoint()
@@ -233,10 +249,12 @@ void support_point::GetSupportPoint()
 		if (visit[i])continue;
 		visit[i] = 1;
 		int flag = -1;//判断是否是局部极小值
+		int flag1 = -1;
 		double now_minz = point[i].z;
 		for (int j = 0; j < edge[i].size(); j++)
 		{
 			visit[edge[i][j]] = 1;
+			if (now_minz == point[edge[i][j]].z)flag1 = 0;
 			if (now_minz > point[edge[i][j]].z)
 			{
 				flag = edge[i][j];
@@ -245,23 +263,35 @@ void support_point::GetSupportPoint()
 		}
 		if (flag != -1)visit[flag] = 0;
 
-		if (flag == -1)
+		if (flag == -1&&flag1==-1)
 		{
 			support_point_list.push_back(point[i]);
 		}
 	}
-	cout << support_point_list.size() << endl;
+	support_off_point.clear();
+	support_off_face.clear();
 	vector<Point3i>face1;
 	face1.clear();
+	for (int i = 0; i < support_point_list.size(); i++)
+	{
+		Point3d C = Point3d(support_point_list[i].x, support_point_list[i].y, support_point_list[i].z-normal_cone_length+normal_top);
+		Point3d A= Point3d(support_point_list[i].x, support_point_list[i].y, support_point_list[i].z + normal_top);
+		model.creatCone(12, min_radius, A, C);
+		merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+		support_point_list[i].z = support_point_list[i].z - normal_cone_length + normal_top+0.01;
+	}
+	cout << support_point_list.size() << endl;
 	//print_off("onlypoint.off",support_point_list,face1);
 	//system("pause");
-	vector<Point3d>face_point_list;
+	//vector<Point3d>face_point_list;
 	vector<Point3d>face2d_point;
+	vector<PointAndNormal>face_point_normal;
 	//找出大角度的面
 	GroupMarkedFaces();
+
 	for (int i = 0; i<cluster_face.size(); i++)
 	{
-		face_point_list.clear();
+		face_point_normal.clear();
 		face2d_point.clear();
 		double minx = 999999.0, miny = 999999.0, maxx = -999999.0, maxy = -999999.0;
 		//每个面的每个点的x,y值,这里每个点都会重复计算几次，增加了复杂度，影响不大
@@ -331,27 +361,47 @@ void support_point::GetSupportPoint()
 			for (int k = 0; k<face2d_point.size(); k++)
 			{
 				Point3d result_point;
+				PointAndNormal result;
 				if (GetInterSecPointRegion(face2d_point[k], result_point, face[cluster_face[i][j]]) == true)
 				{
-					face_point_list.push_back(result_point);
+					result.point = result_point;
+					result.V = normal(face[cluster_face[i][j]]);
+					face_point_normal.push_back(result);
 				}
 			}
 		}
-		if (face_point_list.size() == 0)continue;
+		if (face_point_normal.size() == 0)continue;
 		//去掉重复的点，支撑点在两个面的交界处情况,这里可以排序把复杂度降低为nlgn
-		sort(face_point_list.begin(), face_point_list.end(), face_point_cmp);
-		support_point_list.push_back(face_point_list[0]);
-		for (int j = 1; j<face_point_list.size(); j++)
+		sort(face_point_normal.begin(), face_point_normal.end(), point_normal_cmp);
+		//support_point_list.push_back(face_point_list[0]);
+		for (int j = 0; j<face_point_normal.size(); j++)
 		{
-			if (fabs(face_point_list[j].x - face_point_list[j - 1].x)<1e-3&&fabs(face_point_list[j].y - face_point_list[j - 1].y)<1e-3
-				&&fabs(face_point_list[j].z - face_point_list[j - 1].z)<1e-3)
+			if (j!=0&&fabs(face_point_normal[j].point.x - face_point_normal[j - 1].point.x)<1e-3&&fabs(face_point_normal[j].point.y - 
+				face_point_normal[j - 1].point.y)<1e-3&&fabs(face_point_normal[j].point.z - face_point_normal[j - 1].point.z)<1e-3)
 				continue;
 			else
-				support_point_list.push_back(face_point_list[j]);
+			{
+				Point3d C = Point3d(face_point_normal[j].point.x+ fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.x,
+					face_point_normal[j].point.y+ fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.y, 
+					face_point_normal[j].point.z+fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.z);
+				Point3d A = Point3d(face_point_normal[j].point.x-  normal_top*face_point_normal[j].V.x,
+					face_point_normal[j].point.y - normal_top*face_point_normal[j].V.y,
+					face_point_normal[j].point.z - normal_top*face_point_normal[j].V.z);
+				model.creatCone(12, min_radius, A, C);
+				merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
+
+				Point3d B = Point3d(C.x, C.y, C.z-normal_cyline_length);
+				model.creatCylinder(12, min_radius, min_radius, C, B);
+				merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
+				support_point_list.push_back(B);
+			}	
 		}
+
 	}
 	cout << "最终的需要加支撑的点" << support_point_list.size() << endl;
-
+	point_radius.clear();
+	for (int i = 0; i < support_point_list.size(); i++)
+		point_radius[support_point_list[i]] = min_radius;
 	//print_off("point.off",support_point_list,face1);
 	GenerateSupport();
 	//找出悬吊边
@@ -492,46 +542,48 @@ void support_point::GenerateSupport()
 	{
 		Point3d_mesh temp;
 		temp.point = support_point_list[i];
-		temp.flag = 1;
+		temp.flag = 2;
 		support_point_sort.push_back(temp);
 	}
 	sort(support_point_sort.begin(), support_point_sort.end(), Z_cmp);
-	vector<Point3d_mesh> temp_sort;
-	for (int i = 0; i<support_point_sort.size(); i++)
-	{
-		Point3d a = support_point_sort[i].point, b = support_point_sort[i].point;
-		b.z -= cone_length;
-		int flag = 0;
-		for (int j = 0; j < 9; j++)
-		{
-			Segment segment_query(Point(a.x, a.y, a.z-0.01), Point(a.x+cone_length * cos(PI * 2.0 / 9.0*j),
-				a.y+cone_length*sin(PI * 2.0 / 9.0*j), a.z-cone_length*tan(support_angle / 180.0*PI)));
-			if (tree.do_intersect(segment_query))
-			{
-				flag = 1; 
-				cout << i << endl;
-				break;
-			}
-		}
-	/*	Segment segment_query(Point(a.x, a.y, a.z - 0.01), Point(a.x, a.y, a.z-2*cone_length));
-		if (tree.do_intersect(segment_query))
-		{
-			flag = 1;
-			cout << i << endl;
-		}*/
-		if (flag == 1)continue;
-		Point3d_mesh B;
-		B.point = b;
-		B.flag = 2;
-		temp_sort.push_back(B);
-		support_line_node node;
-		node.a = a;
-		node.b = b;
-		node.flaga = 1;
-		node.flagb = 2;
-		support_line.push_back(node);
-	}
-	support_point_sort = temp_sort;
+	vector<Point3d_mesh> temp_sort= support_point_sort;
+	//for (int i = 0; i<support_point_sort.size(); i++)
+	//{
+	//	Point3d a = support_point_sort[i].point, b = support_point_sort[i].point;
+	//	b.z -= cone_length;
+	//	int flag = 0;
+	//	/*for (int j = 0; j < 9; j++)
+	//	{
+	//		Segment segment_query(Point(a.x+ top * cos(PI * 2.0 / 9.0*j), 
+	//			a.y+ top*sin(PI * 2.0 / 9.0*j), a.z-top-0.01),
+	//			Point(a.x+cone_length * cos(PI * 2.0 / 9.0*j),
+	//			a.y+cone_length*sin(PI * 2.0 / 9.0*j), a.z-cone_length*tan(support_angle / 180.0*PI)));
+	//		if (tree.do_intersect(segment_query))
+	//		{
+	//			flag = 1; 
+	//			cout << i << endl;
+	//			break;
+	//		}
+	//	}*/
+	///*	Segment segment_query(Point(a.x, a.y, a.z - 0.01), Point(a.x, a.y, a.z-2*cone_length));
+	//	if (tree.do_intersect(segment_query))
+	//	{
+	//		flag = 1;
+	//		cout << i << endl;
+	//	}
+	//	if (flag == 1)continue;*/
+	//	Point3d_mesh B;
+	//	B.point = b;
+	//	B.flag = 2;
+	//	temp_sort.push_back(B);
+	//	support_line_node node;
+	//	node.a = a;
+	//	node.b = b;
+	//	node.flaga = 1;
+	//	node.flagb = 2;
+	//	support_line.push_back(node);
+	//}
+	//support_point_sort = temp_sort;
 	while (support_point_sort.size()>1)
 	{
 		if (support_point_sort[0].point.z <= min_z)break;
@@ -554,19 +606,19 @@ void support_point::GenerateSupport()
 			for (int j = 0; j < 9; j++)
 			{
 				//支撑和mesh的碰撞检测
-				Segment segment_query(Point(a.x()+ (support_point_sort[0].flag*0.1-0.1+min_radius) * cos(PI * 2.0 / 9.0*j),
-					a.y()+ (support_point_sort[0].flag*0.1-0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), a.z() ),
-					Point(insection.x + min(max_radius,support_point_sort[0].flag*0.1+ min_radius) * cos(PI * 2.0 / 9.0*j),
-					insection.y + min(max_radius, support_point_sort[0].flag*0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+				Segment segment_query(Point(a.x()+ (support_point_sort[0].flag*0.1-0.2+min_radius) * cos(PI * 2.0 / 9.0*j),
+					a.y()+ (support_point_sort[0].flag*0.1-0.2 + min_radius)*sin(PI * 2.0 / 9.0*j), a.z() ),
+					Point(insection.x + min(max_radius,support_point_sort[0].flag*0.1-0.1+ min_radius) * cos(PI * 2.0 / 9.0*j),
+					insection.y + min(max_radius, support_point_sort[0].flag*0.1-0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
 				if (tree.do_intersect(segment_query))
 				{
 					flag = 1;
 					break;
 				}
-				Segment segment_query1(Point(support_point_sort[i].point.x + (support_point_sort[i].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
-					support_point_sort[i].point.y + (support_point_sort[i].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), support_point_sort[i].point.z),
-					Point(insection.x + min(max_radius,support_point_sort[i].flag*0.1  + min_radius) * cos(PI * 2.0 / 9.0*j),
-						insection.y + min(max_radius, support_point_sort[i].flag*0.1  + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+				Segment segment_query1(Point(support_point_sort[i].point.x + (support_point_sort[i].flag*0.1 - 0.2 + min_radius) * cos(PI * 2.0 / 9.0*j),
+					support_point_sort[i].point.y + (support_point_sort[i].flag*0.1 - 0.2 + min_radius)*sin(PI * 2.0 / 9.0*j), support_point_sort[i].point.z),
+					Point(insection.x + min(max_radius,support_point_sort[i].flag*0.1-0.1  + min_radius) * cos(PI * 2.0 / 9.0*j),
+						insection.y + min(max_radius, support_point_sort[i].flag*0.1-0.1  + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
 				if (tree.do_intersect(segment_query1))
 				{
 					flag = 1;
@@ -664,15 +716,15 @@ void support_point::GenerateSupport()
 				node.a = temp_sort[0].point;
 				node.b = insection_mesh.point;
 				node.flaga = temp_sort[0].flag;
-				node.flagb = min(int((max_radius - min_radius) / 0.1) + 1,max(temp_sort[tmp].flag, temp_sort[0].flag)+1);
+				node.flagb = min(int((max_radius - min_radius) / 0.1) + 2,max(temp_sort[tmp].flag, temp_sort[0].flag)+1);
 				support_line.push_back(node);
 				node.a = temp_sort[tmp].point;
 				node.flaga = temp_sort[tmp].flag;
 				support_line.push_back(node);
 				insection_mesh.flag = node.flagb;
 				support_point_sort.push_back(insection_mesh);
-				/*cout << tmp << " " << temp_sort.size() << endl;
-				cout << temp_sort[tmp].flag<<" "<<node.flagb << endl;*/
+				//cout << tmp << " " << temp_sort.size() << endl;
+				//cout << temp_sort[tmp].flag<<" "<<node.flagb << endl;
 				sort(support_point_sort.begin(), support_point_sort.end(), Z_cmp);
 			}
 			//交到面上
@@ -695,23 +747,13 @@ void support_point::GenerateSupport()
 		support_line_node node;
 		node.a = support_point_sort[i].point;
 		node.flaga = support_point_sort[i].flag;
-		node.flagb = int((max_radius - min_radius) / 0.1) + 1;
+		node.flagb = int((max_radius - min_radius) / 0.1) + 2;
 		node.b = Point3d(support_point_sort[i].point.x, support_point_sort[i].point.y, min_z);
 		support_line.push_back(node);
 	}
 	GenerateSupportModel();
 }
 
-void merge_off(vector<Point3d>&sum_point, vector<Point3i>&sum_face, vector<Point3d>&leaf_point, vector<Point3i>&leaf_face)
-{
-	int sum = sum_point.size();
-	for (int i = 0; i<leaf_point.size(); i++)
-		sum_point.push_back(leaf_point[i]);
-	for (int i = 0; i<leaf_face.size(); i++)
-		sum_face.push_back(Point3i(leaf_face[i].x + sum, leaf_face[i].y + sum, leaf_face[i].z + sum));
-
-
-}
 
 //加底面
 //2d两点距离
@@ -779,9 +821,7 @@ bool cmp_line(support_line_node& a, support_line_node& b)
 
 void support_point::GenerateSupportModel()
 {
-	support_off_point.clear();
-	support_off_face.clear();
-	map<Point3d, double>point_radius;
+	
 	sort(support_line.begin(), support_line.end(), cmp_line);
 	/*model.creatBase(min_x,max_x,min_y,max_y, min_z-bottom_down, bottom_height);
 	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);*/
