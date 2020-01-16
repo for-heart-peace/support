@@ -211,7 +211,6 @@ void support_point::GroupMarkedFaces()
 }
 
 
-
 bool face_point_cmp(const Point3d &a, const Point3d &b)
 {
 	if (a.x == b.x)
