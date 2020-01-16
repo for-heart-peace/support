@@ -542,6 +542,7 @@ void support_point::GenerateSupport()
 		Point3d insection_temp;
 		for (int i = 1; i<support_point_sort.size(); i++)
 		{
+			//是否满足贪心的原则
 			if ((pow(support_point_sort[0].point.z - support_point_sort[i].point.z, 2)/ tan(support_angle / 180.0*PI) -
 				pow(support_point_sort[0].point.x - support_point_sort[i].point.x, 2) -
 				pow(support_point_sort[0].point.y - support_point_sort[i].point.y, 2))>-0.04)continue;
@@ -552,20 +553,20 @@ void support_point::GenerateSupport()
 			Point b(insection.x, insection.y, insection.z);
 			for (int j = 0; j < 9; j++)
 			{
-
+				//支撑和mesh的碰撞检测
 				Segment segment_query(Point(a.x()+ (support_point_sort[0].flag*0.1-0.1+min_radius) * cos(PI * 2.0 / 9.0*j),
 					a.y()+ (support_point_sort[0].flag*0.1-0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), a.z() ),
-					Point(insection.x + (support_point_sort[0].flag*0.1-0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
-					insection.y + (support_point_sort[0].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+					Point(insection.x + min(max_radius,support_point_sort[0].flag*0.1+ min_radius) * cos(PI * 2.0 / 9.0*j),
+					insection.y + min(max_radius, support_point_sort[0].flag*0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
 				if (tree.do_intersect(segment_query))
 				{
 					flag = 1;
 					break;
 				}
-				Segment segment_query1(Point(support_point_sort[i].point.x + (support_point_sort[0].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
-					support_point_sort[i].point.y + (support_point_sort[0].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), support_point_sort[i].point.z),
-					Point(insection.x + (support_point_sort[0].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
-						insection.y + (support_point_sort[0].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+				Segment segment_query1(Point(support_point_sort[i].point.x + (support_point_sort[i].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
+					support_point_sort[i].point.y + (support_point_sort[i].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), support_point_sort[i].point.z),
+					Point(insection.x + min(max_radius,support_point_sort[i].flag*0.1  + min_radius) * cos(PI * 2.0 / 9.0*j),
+						insection.y + min(max_radius, support_point_sort[i].flag*0.1  + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
 				if (tree.do_intersect(segment_query1))
 				{
 					flag = 1;
@@ -600,12 +601,10 @@ void support_point::GenerateSupport()
 					{
 						const Point* p = boost::get<Point>(&(intersection->first));
 						Point2Point3d(c3d, *p);
-						//cout << *p << endl;
+					
 						double dis1 = dis_pp(support_point_sort[0].point, c3d);
-						//cout << support_point_sort.size() << "  " << dis << " " << dis1 << endl;
 						if (dis > dis1)
 						{
-							//cout << support_point_sort.size() << " " << dis1 << endl;
 							dis = dis1;
 							tmp = -1;
 							flag = 1;
@@ -653,7 +652,7 @@ void support_point::GenerateSupport()
 		else
 		{
 			//两圆锥相交
-			if (flag == 0)
+			if (tmp!=-1)
 			{
 				for (int i = 1; i < temp_sort.size(); i++)
 					if (i != tmp)
@@ -661,7 +660,6 @@ void support_point::GenerateSupport()
 				Point3d_mesh insection_mesh;
 				//insection_mesh.flag = 0;
 				insection_mesh.point = insection_temp;
-				support_point_sort.push_back(insection_mesh);
 				support_line_node node;
 				node.a = temp_sort[0].point;
 				node.b = insection_mesh.point;
@@ -671,7 +669,10 @@ void support_point::GenerateSupport()
 				node.a = temp_sort[tmp].point;
 				node.flaga = temp_sort[tmp].flag;
 				support_line.push_back(node);
-
+				insection_mesh.flag = node.flagb;
+				support_point_sort.push_back(insection_mesh);
+				/*cout << tmp << " " << temp_sort.size() << endl;
+				cout << temp_sort[tmp].flag<<" "<<node.flagb << endl;*/
 				sort(support_point_sort.begin(), support_point_sort.end(), Z_cmp);
 			}
 			//交到面上
