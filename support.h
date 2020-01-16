@@ -14,6 +14,9 @@ public:
 	double min_z;
 	double min_radius;
 	double max_radius;
+	double normal_top;
+	double normal_cone_length;
+	double normal_cyline_length;
 	double top;
 	double support_angle;
 	double to_mesh_angle;
@@ -53,5 +56,6 @@ private :
 	vector<vector<int>>cluster_face;						//提取出每个堆的面
 	base_model model;
 	vector<Point2d>point_2d;
+	map<Point3d, double>point_radius;
 };
 
