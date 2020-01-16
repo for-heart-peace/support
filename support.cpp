@@ -263,7 +263,7 @@ void support_point::GetSupportPoint()
 		}
 		if (flag != -1)visit[flag] = 0;
 
-		if (flag == -1&&flag1==-1)
+		if (flag == -1 && flag1 == -1)
 		{
 			support_point_list.push_back(point[i]);
 		}
@@ -274,11 +274,11 @@ void support_point::GetSupportPoint()
 	face1.clear();
 	for (int i = 0; i < support_point_list.size(); i++)
 	{
-		Point3d C = Point3d(support_point_list[i].x, support_point_list[i].y, support_point_list[i].z-normal_cone_length+normal_top);
-		Point3d A= Point3d(support_point_list[i].x, support_point_list[i].y, support_point_list[i].z + normal_top);
+		Point3d C = Point3d(support_point_list[i].x, support_point_list[i].y, support_point_list[i].z - normal_cone_length + normal_top);
+		Point3d A = Point3d(support_point_list[i].x, support_point_list[i].y, support_point_list[i].z + normal_top);
 		model.creatCone(12, min_radius, A, C);
 		merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
-		support_point_list[i].z = support_point_list[i].z - normal_cone_length + normal_top+0.01;
+		support_point_list[i].z = support_point_list[i].z - normal_cone_length + normal_top + 0.01;
 	}
 	cout << support_point_list.size() << endl;
 	//print_off("onlypoint.off",support_point_list,face1);
@@ -313,9 +313,9 @@ void support_point::GetSupportPoint()
 		int x_point = floor((maxx - minx) / dis_x);//x轴方向的点个数
 		int y_point = floor((maxy - miny) / dis_y);//y轴方向的点个数
 
-		if (x_point == 0 || y_point == 0)continue;
+		if (x_point == 0 && y_point == 0)continue;
 
-		/*if(x_point==0)
+		if(x_point==0)
 		{
 		double now_x=(maxx+minx)/2;
 		Point3d temp;
@@ -339,7 +339,7 @@ void support_point::GetSupportPoint()
 		temp.x=nowx+j*dis_x;
 		face2d_point.push_back(temp);
 		}
-		}*/
+		}
 		else
 		{
 			Point3d temp;
@@ -376,25 +376,25 @@ void support_point::GetSupportPoint()
 		//support_point_list.push_back(face_point_list[0]);
 		for (int j = 0; j<face_point_normal.size(); j++)
 		{
-			if (j!=0&&fabs(face_point_normal[j].point.x - face_point_normal[j - 1].point.x)<1e-3&&fabs(face_point_normal[j].point.y - 
+			if (j != 0 && fabs(face_point_normal[j].point.x - face_point_normal[j - 1].point.x)<1e-3&&fabs(face_point_normal[j].point.y -
 				face_point_normal[j - 1].point.y)<1e-3&&fabs(face_point_normal[j].point.z - face_point_normal[j - 1].point.z)<1e-3)
 				continue;
 			else
 			{
-				Point3d C = Point3d(face_point_normal[j].point.x+ fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.x,
-					face_point_normal[j].point.y+ fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.y, 
-					face_point_normal[j].point.z+fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.z);
-				Point3d A = Point3d(face_point_normal[j].point.x-  normal_top*face_point_normal[j].V.x,
+				Point3d C = Point3d(face_point_normal[j].point.x + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.x,
+					face_point_normal[j].point.y + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.y,
+					face_point_normal[j].point.z + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.z);
+				Point3d A = Point3d(face_point_normal[j].point.x - normal_top*face_point_normal[j].V.x,
 					face_point_normal[j].point.y - normal_top*face_point_normal[j].V.y,
 					face_point_normal[j].point.z - normal_top*face_point_normal[j].V.z);
 				model.creatCone(12, min_radius, A, C);
 				merge_off(support_off_point, support_off_face, model.conePoint, model.coneFace);
 
-				Point3d B = Point3d(C.x, C.y, C.z-normal_cyline_length);
+				Point3d B = Point3d(C.x, C.y, C.z - normal_cyline_length);
 				model.creatCylinder(12, min_radius, min_radius, C, B);
 				merge_off(support_off_point, support_off_face, model.cylinderPoint, model.cylinderFace);
 				support_point_list.push_back(B);
-			}	
+			}
 		}
 
 	}
@@ -546,7 +546,7 @@ void support_point::GenerateSupport()
 		support_point_sort.push_back(temp);
 	}
 	sort(support_point_sort.begin(), support_point_sort.end(), Z_cmp);
-	vector<Point3d_mesh> temp_sort= support_point_sort;
+	vector<Point3d_mesh> temp_sort = support_point_sort;
 	//for (int i = 0; i<support_point_sort.size(); i++)
 	//{
 	//	Point3d a = support_point_sort[i].point, b = support_point_sort[i].point;
@@ -595,7 +595,7 @@ void support_point::GenerateSupport()
 		for (int i = 1; i<support_point_sort.size(); i++)
 		{
 			//是否满足贪心的原则
-			if ((pow(support_point_sort[0].point.z - support_point_sort[i].point.z, 2)/ tan(support_angle / 180.0*PI) -
+			if ((pow(support_point_sort[0].point.z - support_point_sort[i].point.z, 2) / tan(support_angle / 180.0*PI) -
 				pow(support_point_sort[0].point.x - support_point_sort[i].point.x, 2) -
 				pow(support_point_sort[0].point.y - support_point_sort[i].point.y, 2))>-0.04)continue;
 			Point3d insection = calculateTheIntersectionOfTwoCone(support_point_sort[0].point, support_point_sort[i].point, support_angle / 180.0*PI);
@@ -606,10 +606,10 @@ void support_point::GenerateSupport()
 			for (int j = 0; j < 9; j++)
 			{
 				//支撑和mesh的碰撞检测
-				Segment segment_query(Point(a.x()+ (support_point_sort[0].flag*0.1-0.2+min_radius) * cos(PI * 2.0 / 9.0*j),
-					a.y()+ (support_point_sort[0].flag*0.1-0.2 + min_radius)*sin(PI * 2.0 / 9.0*j), a.z() ),
-					Point(insection.x + min(max_radius,support_point_sort[0].flag*0.1-0.1+ min_radius) * cos(PI * 2.0 / 9.0*j),
-					insection.y + min(max_radius, support_point_sort[0].flag*0.1-0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+				Segment segment_query(Point(a.x() + (support_point_sort[0].flag*0.1 - 0.2 + min_radius) * cos(PI * 2.0 / 9.0*j),
+					a.y() + (support_point_sort[0].flag*0.1 - 0.2 + min_radius)*sin(PI * 2.0 / 9.0*j), a.z()),
+					Point(insection.x + min(max_radius, support_point_sort[0].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
+						insection.y + min(max_radius, support_point_sort[0].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
 				if (tree.do_intersect(segment_query))
 				{
 					flag = 1;
@@ -617,8 +617,8 @@ void support_point::GenerateSupport()
 				}
 				Segment segment_query1(Point(support_point_sort[i].point.x + (support_point_sort[i].flag*0.1 - 0.2 + min_radius) * cos(PI * 2.0 / 9.0*j),
 					support_point_sort[i].point.y + (support_point_sort[i].flag*0.1 - 0.2 + min_radius)*sin(PI * 2.0 / 9.0*j), support_point_sort[i].point.z),
-					Point(insection.x + min(max_radius,support_point_sort[i].flag*0.1-0.1  + min_radius) * cos(PI * 2.0 / 9.0*j),
-						insection.y + min(max_radius, support_point_sort[i].flag*0.1-0.1  + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
+					Point(insection.x + min(max_radius, support_point_sort[i].flag*0.1 - 0.1 + min_radius) * cos(PI * 2.0 / 9.0*j),
+						insection.y + min(max_radius, support_point_sort[i].flag*0.1 - 0.1 + min_radius)*sin(PI * 2.0 / 9.0*j), insection.z));
 				if (tree.do_intersect(segment_query1))
 				{
 					flag = 1;
@@ -653,7 +653,7 @@ void support_point::GenerateSupport()
 					{
 						const Point* p = boost::get<Point>(&(intersection->first));
 						Point2Point3d(c3d, *p);
-					
+
 						double dis1 = dis_pp(support_point_sort[0].point, c3d);
 						if (dis > dis1)
 						{
@@ -696,7 +696,7 @@ void support_point::GenerateSupport()
 			node.b = temp_sort[0].point;
 			node.b.z = min_z;
 			node.flaga = temp_sort[0].flag;
-			node.flagb = (max_radius-min_radius)/0.1+1;
+			node.flagb = (max_radius - min_radius) / 0.1 + 1;
 			support_line.push_back(node);
 			for (int i = 1; i<temp_sort.size(); i++)
 				support_point_sort.push_back(temp_sort[i]);
@@ -704,7 +704,7 @@ void support_point::GenerateSupport()
 		else
 		{
 			//两圆锥相交
-			if (tmp!=-1)
+			if (tmp != -1)
 			{
 				for (int i = 1; i < temp_sort.size(); i++)
 					if (i != tmp)
@@ -716,7 +716,7 @@ void support_point::GenerateSupport()
 				node.a = temp_sort[0].point;
 				node.b = insection_mesh.point;
 				node.flaga = temp_sort[0].flag;
-				node.flagb = min(int((max_radius - min_radius) / 0.1) + 2,max(temp_sort[tmp].flag, temp_sort[0].flag)+1);
+				node.flagb = min(int((max_radius - min_radius) / 0.1) + 2, max(temp_sort[tmp].flag, temp_sort[0].flag) + 1);
 				support_line.push_back(node);
 				node.a = temp_sort[tmp].point;
 				node.flaga = temp_sort[tmp].flag;
@@ -809,7 +809,7 @@ void support_point::bottom_base()
 		}
 		bottom_point.push_back(point_2d[i]);
 	}
-	model.creatBase(bottom_point, min_z - bottom_down+0.1, bottom_height);
+	model.creatBase(bottom_point, min_z - bottom_down + 0.1, bottom_height);
 	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);
 }
 
@@ -821,7 +821,7 @@ bool cmp_line(support_line_node& a, support_line_node& b)
 
 void support_point::GenerateSupportModel()
 {
-	
+
 	sort(support_line.begin(), support_line.end(), cmp_line);
 	/*model.creatBase(min_x,max_x,min_y,max_y, min_z-bottom_down, bottom_height);
 	merge_off(support_off_point, support_off_face, model.bottomPoint, model.bottomFace);*/
@@ -928,7 +928,7 @@ void support_point::GenerateSupportModel()
 				temp.b.z += top*(temp.b.z - temp.a.z) / dis;
 				temp.b.z = max(temp.b.z, min_z);
 				//cout << dis << " "<<cone_length << endl;
-				
+
 				if (dis <= cone_length)
 				{
 					model.creatReverseCone(12, point_radius[temp.a], temp.b, temp.a);
@@ -983,9 +983,9 @@ Point3d support_point::calculateTheIntersectionOfTwoCone(const Point3d &A, const
 	//该点一定在两点连线的的下方
 	Point3d C;
 	double disz_to_xy;
-	disz_to_xy = (A.z - B.z)/tan(alpha);
+	disz_to_xy = (A.z - B.z) / tan(alpha);
 	double disxy = sqrt(pow(A.x - B.x, 2) + pow(A.y - B.y, 2));
-	C.z = B.z - (disxy - disz_to_xy)/2 *tan(alpha);
+	C.z = B.z - (disxy - disz_to_xy) / 2 * tan(alpha);
 	double temp = (disxy - disz_to_xy) / 2;
 	C.x = B.x + (A.x - B.x)*temp / disxy;
 	C.y = B.y + (A.y - B.y)*temp / disxy;
