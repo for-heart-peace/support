@@ -4,7 +4,7 @@
 
 # 需要配置cgal，在vs2015做过实验。
 
-  test.min_radius = 0.25; //支撑和面接触的圆锥的截面半径
+ 	test.min_radius = 0.25; //支撑和面接触的圆锥的截面半径
   
 	test.max_radius = 1.0; //支撑的最大半径
   
