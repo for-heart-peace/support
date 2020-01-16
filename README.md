@@ -4,6 +4,8 @@
 
 # 需要配置cgal，在vs2015做过实验。
 
+该程序参考了Clever Support Efficient Support Structure Generation for Digital Fabrication(SGP2014)的思路，实现方法除了使用了一些数据结构进行加速，其他基本不变。
+
  	test.min_radius = 0.25; //支撑和面接触的圆锥的截面半径
   
 	test.max_radius = 1.0; //支撑的最大半径
