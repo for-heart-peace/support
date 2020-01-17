@@ -270,7 +270,7 @@ void support_point::GetSupportPoint()
 
 		if (flag == -1 && flag1 == -1)
 		{
-			Segment segment_query(Point(point[i].x, point[i].y, point[i].z - 0.01), Point(point[i].x, point[i].y, point[i].z-2*cone_length));
+		Segment segment_query(Point(point[i].x, point[i].y, point[i].z - 0.01), Point(point[i].x, point[i].y, point[i].z-2*normal_cone_length));
 	       	if (tree.do_intersect(segment_query))continue;
 			support_point_list.push_back(point[i]);
 		}
@@ -388,7 +388,7 @@ void support_point::GetSupportPoint()
 				continue;
 			else
 			{
-				Segment segment_query(Point(point[i].x, point[i].y, point[i].z - 0.01), Point(point[i].x, point[i].y, point[i].z-2*cone_length));
+				Segment segment_query(Point(point[i].x, point[i].y, point[i].z - 0.01), Point(point[i].x, point[i].y, point[i].z-2*normal_cone_length));
 				if (tree.do_intersect(segment_query))continue;
 				Point3d C = Point3d(face_point_normal[j].point.x + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.x,
 					face_point_normal[j].point.y + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.y,
