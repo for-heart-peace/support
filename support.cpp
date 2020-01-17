@@ -277,6 +277,8 @@ void support_point::GetSupportPoint()
 	}
 	support_off_point.clear();
 	support_off_face.clear();
+	support_off_point=point;//把原模型加上
+	support_off_face=face;
 	vector<Point3i>face1;
 	face1.clear();
 	for (int i = 0; i < support_point_list.size(); i++)
