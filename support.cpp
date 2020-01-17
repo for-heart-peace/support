@@ -243,6 +243,11 @@ bool point_normal_cmp(const PointAndNormal &a, const PointAndNormal &b)
 void support_point::GetSupportPoint()
 {
 	support_point_list.clear();
+	const char* filename = file_name.c_str();
+	std::ifstream input(filename);
+	Polyhedron polyhedron;
+	input >> polyhedron;
+	Tree tree(faces(polyhedron).begin(), faces(polyhedron).end(), polyhedron);
 	//最低点获取
 	for (int i = 0; i < point.size(); i++)
 	{
@@ -265,6 +270,8 @@ void support_point::GetSupportPoint()
 
 		if (flag == -1 && flag1 == -1)
 		{
+			Segment segment_query(Point(point[i].x, point[i].y, point[i].z - 0.01), Point(point[i].x, point[i].y, point[i].z-2*cone_length));
+	       	if (tree.do_intersect(segment_query))continue;
 			support_point_list.push_back(point[i]);
 		}
 	}
@@ -381,6 +388,8 @@ void support_point::GetSupportPoint()
 				continue;
 			else
 			{
+				Segment segment_query(Point(point[i].x, point[i].y, point[i].z - 0.01), Point(point[i].x, point[i].y, point[i].z-2*cone_length));
+				if (tree.do_intersect(segment_query))continue;
 				Point3d C = Point3d(face_point_normal[j].point.x + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.x,
 					face_point_normal[j].point.y + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.y,
 					face_point_normal[j].point.z + fabs(-normal_cone_length + normal_top)*face_point_normal[j].V.z);
